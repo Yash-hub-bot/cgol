@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <SDL2/SDL.h>
 #include <stdbool.h>
+#include <time.h>
 
 #define HB 230
 #define VB 170
@@ -60,6 +61,7 @@ void update(){
 			else if(grid[i][j] && (n==2 || n==3)) temp[i][j]=1;
 			else if(grid[i][j] && n>3) temp[i][j]=0;
 			else if(!grid[i][j] && n==3) temp[i][j]=1;
+			else temp[i][j]=grid[i][j];
 			//printf("%d,%d,%d,%d,%d\n",i,j,n,temp[i][j],grid[i][j]);
 		}
 		//printf("\n");
@@ -118,13 +120,21 @@ void read_config(char  *file){
 int main(int argc,char *argv[]){
 	memset(grid,0,sizeof(grid));
 	memset(temp,0,sizeof(temp));
+	srand(time(NULL));
 	
 	if(argc>2){
 		perror("more than 1 argument not allowed");
 		exit(1);
 	}
-	if(argc==2){
+	else if(argc==2){
 		read_config(argv[1]);	
+	}
+	else {
+		for(int j=0;j<VB; j++){
+			for(int i=0;i<HB;i++){
+				grid[i][j]=rand()&1;
+			}
+		}
 	}
 
 	// 1. Initialize SDL Video Subsystem
@@ -151,6 +161,8 @@ int main(int argc,char *argv[]){
 
 	// 3. Event Loop (keep the window open)
 	bool quit = false;
+	bool pause = false;
+	bool is_dragging_l = false,is_dragging_r=false;
 	SDL_Event e;
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 	while (!quit) {
@@ -166,11 +178,41 @@ int main(int argc,char *argv[]){
 				case SDLK_s:
 					interval+=1000;
 					break;	
+				case SDLK_r:
+					memset(grid,0,sizeof(grid));
+					break;	
+				case SDLK_SPACE:
+					pause=!pause;
+					break;	
 			}
 		    }
+		    else if(e.type == SDL_MOUSEBUTTONDOWN){
+			switch (e.button.button){
+				case SDL_BUTTON_LEFT:
+					//printf("x=%d ,y=%d\n",e.button.x,e.button.y);
+					is_dragging_l=true;
+					grid[e.button.x/GT][e.button.y/GT]=1;
+					break; 
+				case SDL_BUTTON_RIGHT:
+					//printf("x=%d ,y=%d\n",e.button.x,e.button.y);
+					is_dragging_r=true;
+					grid[e.button.x/GT][e.button.y/GT]=0;
+					break; 
+                        }	
+		    }
+		  else if(e.type==SDL_MOUSEBUTTONUP){
+			is_dragging_l=false;
+			is_dragging_r=false;
+		   }
+		else if(e.type==SDL_MOUSEMOTION){
+			if(is_dragging_l) grid[e.motion.x/GT][e.motion.y/GT]=1;
+			if(is_dragging_r) grid[e.motion.x/GT][e.motion.y/GT]=0;
+		}
+		}
+		if(!pause){
+			update();
 		}
 		print_g(renderer);
-		update();
 		usleep(interval);
 	}
 
