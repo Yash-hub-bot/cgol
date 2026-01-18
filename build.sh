@@ -1,2 +1,2 @@
 #!/bin/sh
-gcc -g -Wall main.c -o main.o `sdl2-config --cflags --libs` && ./main.o 
+gcc -O3 -g -Wall main.c -o main.o -lm `sdl2-config --cflags --libs` && ./main.o 

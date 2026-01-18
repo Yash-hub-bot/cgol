@@ -36,7 +36,7 @@ void print_g(SDL_Renderer* renderer){
 			int abs_y=j*GT;
 			if(abs_x+GT<camera_x || abs_y+GT<camera_y) continue;
 			if(i*GT>camera_x+(float)camera_h*(1.0/(float)zoom) || j*GT>camera_y+(float)camera_v*(1.0/(float)zoom)   ) continue;
-			SDL_Rect fillRect = { i*cur_gt-(float)camera_x*zoom, j*cur_gt-(float)camera_y*zoom, MAX(cur_gt,1), MAX(cur_gt,1)}; 
+			SDL_Rect fillRect = { i*cur_gt-(float)camera_x*zoom, j*cur_gt-(float)camera_y*zoom, cur_gt, cur_gt}; 
 			SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 			if(grid[i][j]) SDL_RenderFillRect(renderer, &fillRect);
 		}

@@ -18,8 +18,22 @@
 
 
 
-bool **grid;
-bool **temp;
+//bool **grid;
+//bool **temp;
+
+typedef struct CELL{
+	int x;
+	int y;
+};
+
+typedef struct CELLS{
+	int capacity=0;
+	int size=0;
+	CELL *arr=NULL;	
+}
+
+void cell_append(CELLS *Cs,)
+
 
 
 int interval=100000;
@@ -28,32 +42,21 @@ bool game_pause = false;
 bool is_dragging_l = false,is_dragging_r=false;
 
 int camera_x=0,camera_y=0;
-int global_change=0;
 int camera_h=200*GT,camera_v=150*GT;
 float zoom=1;
 
 void print_g(SDL_Renderer* renderer){
-	if(global_change){
-		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-		SDL_RenderClear(renderer);
-	}
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+	SDL_RenderClear(renderer);
 	for(int i=0;i<HB;i++){
 		for(int j=0;j<VB; j++){
-			if(!global_change && grid[i][j]==temp[i][j]) continue;
 			if(GRID2SCREEN(i+1,camera_x)<=0 || GRID2SCREEN(j+1,camera_y)<=0)    continue;
 			if(GRID2SCREEN(i,camera_x)>camera_h || GRID2SCREEN(j,camera_y)>camera_v) continue;
 			SDL_Rect fillRect = { GRID2SCREEN(i,camera_x),GRID2SCREEN(j,camera_y), SCALEUP(GT),SCALEUP(GT) }; 
-			if(grid[i][j]){
-				SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-				SDL_RenderFillRect(renderer, &fillRect);
-			}
-			else {
-				SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-				SDL_RenderFillRect(renderer, &fillRect);
-			}
+			SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+			if(grid[i][j]) SDL_RenderFillRect(renderer, &fillRect);
 		}
 	}
-	global_change=1;
 	SDL_RenderPresent(renderer);
 }
 
@@ -169,7 +172,6 @@ void input_read(SDL_Event* e){
 					interval+=1000;
 					break;	
 				case SDLK_r:
-					global_change=1;
 					for(int i=0; i<HB; i++){
 						memset(grid[i],0,VB*sizeof(bool));
 					}
@@ -178,27 +180,21 @@ void input_read(SDL_Event* e){
 					game_pause=!game_pause;
 					break;	
 				case SDLK_LEFTBRACKET:
-					global_change=1;
 					zoom*=1.1;
 					break;	
 				case SDLK_RIGHTBRACKET:
-					global_change=1;
 					zoom/=1.1;
 					break;	
 				case SDLK_DOWN:
-					global_change=1;
 					camera_y+=10;
 					break;	
 				case SDLK_UP:
-					global_change=1;
 					camera_y-=10;
 					break;	
 				case SDLK_LEFT:
-					global_change=1;
 					camera_x-=10;
 					break;	
 				case SDLK_RIGHT:
-					global_change=1;
 					camera_x+=10;
 					break;	
 			}
@@ -226,13 +222,11 @@ void input_read(SDL_Event* e){
 			if(is_dragging_r) grid[SCREEN2GRID(e->button.x,camera_x)][SCREEN2GRID(e->button.y,camera_y)]=0;
 			break;
 		case SDL_MOUSEWHEEL :
-			global_change=1;
 			if(e->wheel.y>0){
 				zoom*=1.1;
 			} else if(e->wheel.y<0){
 				zoom/=1.1;
 			}
-			break;
 
 	}
 }
@@ -291,11 +285,8 @@ int main(int argc,char *argv[]){
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 	while (!game_quit) {
 		while (SDL_PollEvent(&e) != 0) {
-			if(e.window.event==SDL_WINDOWEVENT_RESIZED){
-				global_change=1;
-				camera_h=e.window.data1;
-				camera_v=e.window.data2;
-			}
+			if(e.window.event==SDL_WINDOWEVENT_RESIZED)
+			camera_h=e.window.data1 , camera_v=e.window.data2;
 			//printf("%d,%d\n",e.window.data1,e.window.data2);
 			input_read(&e);
 		}
