@@ -5,9 +5,10 @@
 #include <SDL2/SDL.h>
 #include <stdbool.h>
 #include <time.h>
+#include <cuds_runtime.h>
 
-#define HB 2000
-#define VB 1100
+#define HB 1000
+#define VB 1000
 #define GT 5
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
@@ -118,8 +119,6 @@ void read_config(char  *file){
 }
 
 void input_read(SDL_Event* e){
-	int tran_x=((float)(e->button.x)*(1.0/zoom)+camera_x)/GT;
-	int tran_y=((float)(e->button.y)*(1.0/zoom)+camera_y)/GT;
 	switch(e->type){
 		case SDL_QUIT :
 			game_quit = true;
@@ -167,12 +166,12 @@ void input_read(SDL_Event* e){
 				case SDL_BUTTON_LEFT:
 					//printf("x=%d ,y=%d\n",e.button.x,e.button.y);
 					is_dragging_l=true;
-					grid[tran_x][tran_y]=1;
+					grid[e->button.x/GT][e->button.y/GT]=1;
 					break; 
 				case SDL_BUTTON_RIGHT:
 					//printf("x=%d ,y=%d\n",e.button.x,e.button.y);
 					is_dragging_r=true;
-					grid[tran_x][tran_y]=0;
+					grid[e->button.x/GT][e->button.y/GT]=0;
 					break; 
 			}	
 			break;
@@ -181,8 +180,8 @@ void input_read(SDL_Event* e){
 			is_dragging_r=false;
 			break;
 		case SDL_MOUSEMOTION:
-			if(is_dragging_l) grid[tran_x][tran_y]=1;
-			if(is_dragging_r) grid[tran_x][tran_y]=0;
+			if(is_dragging_l) grid[e->motion.x/GT][e->motion.y/GT]=1;
+			if(is_dragging_r) grid[e->motion.x/GT][e->motion.y/GT]=0;
 			break;
 	}
 }
