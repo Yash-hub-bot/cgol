@@ -6,9 +6,10 @@
 #include <stdbool.h>
 #include <time.h>
 #include <math.h>
+#include <limits.h>
 
-#define HB 2000
-#define VB 1100
+#define HB 4000
+#define VB 2200
 #define GT 5
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define SCALEUP(i) ceil((float)(i)*zoom)
@@ -18,11 +19,25 @@
 
 
 
-//bool **grid;
-//bool **temp;
 
+char *grid;
+char *temp;
 
-int interval=100000;
+bool look(char * g, int i, int j){
+	int x=(j*HB)+i;
+	return g[x/(CHAR_BIT)]&(1<<(x%(CHAR_BIT)) );
+}
+
+void change(char ** g, int i, int j, int a){
+	int x=(j*HB)+i;
+	//printf("change, %d,%d\n",x/(CHAR_BIT*sizeof(char)),x%(CHAR_BIT*sizeof(char)));
+	if(a==1)
+	(*g)[x/(CHAR_BIT)]=(*g)[x/(CHAR_BIT)]|(1<<(x%(CHAR_BIT)) );
+	else if(look(*g,i,j))
+	(*g)[x/(CHAR_BIT)]=(*g)[x/(CHAR_BIT)]^(1<<(x%(CHAR_BIT)) );
+}
+
+int interval=100;
 bool game_quit = false;
 bool game_pause = false;
 bool is_dragging_l = false,is_dragging_r=false;
@@ -51,11 +66,11 @@ void print_g(SDL_Renderer* renderer){
 	}
 	for(int i=0;i<HB;i++){
 		for(int j=0;j<VB; j++){
-			if((!global_change) && grid[i][j]==temp[i][j]) continue;
+			if((!global_change) && look(grid,i,j)==look(temp,i,j)) continue;
 			if(GRID2SCREEN(i+1,camera_x)<=0 || GRID2SCREEN(j+1,camera_y)<=0)    continue;
 			if(GRID2SCREEN(i,camera_x)>camera_h || GRID2SCREEN(j,camera_y)>camera_v) continue;
 			SDL_Rect fillRect = { GRID2SCREEN(i,camera_x),GRID2SCREEN(j,camera_y), SCALEUP(GT),SCALEUP(GT) }; 
-			if(grid[i][j]){
+			if(look(grid,i,j)){
 				SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 				SDL_RenderFillRect(renderer, &fillRect);
 			}
@@ -79,7 +94,7 @@ int neigbour_count(int i, int j){
 	for(int jj=-1; jj<2;jj++){
 		for(int ii=-1; ii<2; ii++){
 			if(ii==0 && jj==0) continue;
-			if(valid(i+ii,j+jj) && grid[i+ii][j+jj]) s++;
+			if(valid(i+ii,j+jj) && look(grid,i+ii,j+jj)) s++;
 		}
 	}
 	return s;
@@ -95,27 +110,27 @@ void update(){
 	*/
 	for(int j=0;j<VB; j++){
 		int n=0;
-		if(valid(0,j-1)) n+=grid[0][j-1];
-		if(valid(0,j)) n+=grid[0][j];
-		if(valid(0,j+1)) n+=grid[0][j+1];
+		if(valid(0,j-1)) n+=look(grid,0,j-1);
+		if(valid(0,j)) n+=look(grid,0,j);
+		if(valid(0,j+1)) n+=look(grid,0,j+1);
 		for(int i=0;i<HB;i++){
 			//int n=neigbour_count(i,j);
-			if(valid(i-2,j-1)) n-=grid[i-2][j-1];
-			if(valid(i-2,j)) n-=grid[i-2][j];
-			if(valid(i-2,j+1)) n-=grid[i-2][j+1];
+			if(valid(i-2,j-1)) n-=look(grid,i-2,j-1);
+			if(valid(i-2,j)) n-=look(grid,i-2,j);
+			if(valid(i-2,j+1)) n-=look(grid,i-2,j+1);
 
-			if(valid(i+1,j-1)) n+=grid[i+1][j-1];
-			if(valid(i+1,j)) n+=grid[i+1][j];
-			if(valid(i+1,j+1)) n+=grid[i+1][j+1];
+			if(valid(i+1,j-1)) n+=look(grid,i+1,j-1);
+			if(valid(i+1,j)) n+=look(grid,i+1,j);
+			if(valid(i+1,j+1)) n+=look(grid,i+1,j+1);
 			
-			n-=grid[i][j];
+			n-=look(grid,i,j);
 			//printf("%d,%d\n",n,neigbour_count(i,j));
-			if(grid[i][j] && n<2) temp[i][j]=0;
-			else if(grid[i][j] && (n==2 || n==3)) temp[i][j]=1;
-			else if(grid[i][j] && n>3) temp[i][j]=0;
-			else if(!grid[i][j] && n==3) temp[i][j]=1;
-			else temp[i][j]=grid[i][j];
-			n+=grid[i][j];
+			if(look(grid,i,j) && n<2) change(&temp,i,j,0);
+			else if(look(grid,i,j) && (n==2 || n==3)) change(&temp,i,j,1);
+			else if(look(grid,i,j) && n>3) change(&temp,i,j,0);
+			else if(!look(grid,i,j) && n==3) change(&temp,i,j,1);
+			else change(&temp,i,j,look(grid,i,j));
+			n+=look(grid,i,j);
 			//printf("%d,%d,%d,%d,%d\n",i,j,n,temp[i][j],grid[i][j]);
 		}
 		
@@ -126,7 +141,7 @@ void update(){
 	//		grid[i][j]=temp[i][j];
 	//	}
 	//}
-	bool **t=grid;
+	char *t=grid;
 	grid=temp;
 	temp=t;	
 }
@@ -155,7 +170,7 @@ void read_config(char  *file){
 			exit(1);
 		}
 		if(character=='#') {
-			grid[i][j]=1;
+			change(&grid,i,j,1);
 		}
 	}
 
@@ -182,9 +197,7 @@ void input_read(SDL_Event* e){
 					break;	
 				case SDLK_r:
 					global_change=1;
-					for(int i=0; i<HB; i++){
-						memset(grid[i],0,VB*sizeof(bool));
-					}
+					memset(grid,0,ceil((float)(HB*VB)/((float)CHAR_BIT)));
 					break;	
 				case SDLK_SPACE:
 					game_pause=!game_pause;
@@ -220,12 +233,13 @@ void input_read(SDL_Event* e){
 				case SDL_BUTTON_LEFT:
 					//printf("x=%d ,y=%d\n",e.button.x,e.button.y);
 					is_dragging_l=true;
-					grid[SCREEN2GRID(e->button.x,camera_x)][SCREEN2GRID(e->button.y,camera_y)]=1;
+					printf("input, %d,%d\n",SCREEN2GRID(e->button.x,camera_x),SCREEN2GRID(e->button.y,camera_y));
+					change(&grid,SCREEN2GRID(e->button.x,camera_x),SCREEN2GRID(e->button.y,camera_y),1);
 					break; 
 				case SDL_BUTTON_RIGHT:
 					//printf("x=%d ,y=%d\n",e.button.x,e.button.y);
 					is_dragging_r=true;
-					grid[SCREEN2GRID(e->button.x,camera_x)][SCREEN2GRID(e->button.y,camera_y)]=0;
+					change(&grid,SCREEN2GRID(e->button.x,camera_x),SCREEN2GRID(e->button.y,camera_y),0);
 					break; 
 			}	
 			break;
@@ -234,8 +248,8 @@ void input_read(SDL_Event* e){
 			is_dragging_r=false;
 			break;
 		case SDL_MOUSEMOTION:
-			if(is_dragging_l) grid[SCREEN2GRID(e->button.x,camera_x)][SCREEN2GRID(e->button.y,camera_y)]=1;
-			if(is_dragging_r) grid[SCREEN2GRID(e->button.x,camera_x)][SCREEN2GRID(e->button.y,camera_y)]=0;
+			if(is_dragging_l) change(&grid,SCREEN2GRID(e->button.x,camera_x),SCREEN2GRID(e->button.y,camera_y),1);
+			if(is_dragging_r) change(&grid,SCREEN2GRID(e->button.x,camera_x),SCREEN2GRID(e->button.y,camera_y),0);
 			break;
 		case SDL_MOUSEWHEEL :
 			global_change=1;
@@ -250,23 +264,13 @@ void input_read(SDL_Event* e){
 }
 
 int main(int argc,char *argv[]){
-	grid=(bool **)malloc(HB*sizeof(bool *));
-	temp=(bool **)malloc(HB*sizeof(bool *));
-	for (int i = 0; i < HB; i++) {
-		grid[i] = (bool *)malloc(VB * sizeof(bool));
-		temp[i] = (bool *)malloc(VB * sizeof(bool));
-	}
-	for(int i=0; i<HB; i++){
-		memset(grid[i],0,VB*sizeof(bool));
-		memset(temp[i],0,VB*sizeof(bool));
-	}
+	grid=(char *)malloc(ceil((float)(HB*VB)/((float)CHAR_BIT)));
+	temp=(char *)malloc(ceil((float)(HB*VB)/((float)CHAR_BIT)));
+	memset(grid,0,ceil((float)(HB*VB)/((float)CHAR_BIT)));
+	memset(temp,0,ceil((float)(HB*VB)/((float)CHAR_BIT)));
 	srand(time(NULL));
 	time_t cur_time=time(NULL);	
 	if(argc>2){
-		for(int i=0; i<HB; i++){
-			free(grid[i]);
-			free(temp[i]);
-		}
 		free(grid);
 		free(temp);
 		perror("more than 1 argument not allowed");
@@ -278,17 +282,13 @@ int main(int argc,char *argv[]){
 	else {
 		for(int i=0;i<HB;i++){
 			for(int j=0;j<VB; j++){
-				grid[i][j]=rand()&1;
+				change(&grid,i,j,rand()&1);
 			}
 		}
 	}
 
 	// 1. Initialize SDL Video Subsystem
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-		for(int i=0; i<HB; i++){
-			free(grid[i]);
-			free(temp[i]);
-		}
 		free(grid);
 		free(temp);
 		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
@@ -305,10 +305,6 @@ int main(int argc,char *argv[]){
 	);
 
 	if (window == NULL) {
-		for(int i=0; i<HB; i++){
-			free(grid[i]);
-			free(temp[i]);
-		}
 		free(grid);
 		free(temp);
 		printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
@@ -341,10 +337,6 @@ int main(int argc,char *argv[]){
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
-	for(int i=0; i<HB; i++){
-		free(grid[i]);
-		free(temp[i]);
-	}
 	free(grid);
 	free(temp);
 	return 0;

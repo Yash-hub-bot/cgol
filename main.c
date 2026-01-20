@@ -32,14 +32,26 @@ int global_change=0;
 int camera_h=200*GT,camera_v=150*GT;
 float zoom=1;
 
+void handle_resize(SDL_Renderer* r) {
+    SDL_GetRendererOutputSize(r, &camera_h, &camera_v);
+
+    SDL_RenderSetViewport(r, NULL); // resets viewport
+    SDL_RenderSetScale(r, 1.0f, 1.0f);
+}
+
+
 void print_g(SDL_Renderer* renderer){
 	if(global_change){
+		handle_resize(renderer);
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-		SDL_RenderClear(renderer);
+		//SDL_RenderPresent(renderer);
+		SDL_Rect fullRect = {0,0,camera_h,camera_v }; 
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+		SDL_RenderFillRect(renderer, &fullRect);
 	}
 	for(int i=0;i<HB;i++){
 		for(int j=0;j<VB; j++){
-			if(!global_change && grid[i][j]==temp[i][j]) continue;
+			if((!global_change) && grid[i][j]==temp[i][j]) continue;
 			if(GRID2SCREEN(i+1,camera_x)<=0 || GRID2SCREEN(j+1,camera_y)<=0)    continue;
 			if(GRID2SCREEN(i,camera_x)>camera_h || GRID2SCREEN(j,camera_y)>camera_v) continue;
 			SDL_Rect fillRect = { GRID2SCREEN(i,camera_x),GRID2SCREEN(j,camera_y), SCALEUP(GT),SCALEUP(GT) }; 
@@ -47,13 +59,13 @@ void print_g(SDL_Renderer* renderer){
 				SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 				SDL_RenderFillRect(renderer, &fillRect);
 			}
-			else {
+			else if(!global_change){
 				SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 				SDL_RenderFillRect(renderer, &fillRect);
 			}
 		}
 	}
-	global_change=1;
+	global_change=MAX(0,global_change-1);
 	SDL_RenderPresent(renderer);
 }
 
@@ -251,6 +263,12 @@ int main(int argc,char *argv[]){
 	srand(time(NULL));
 	time_t cur_time=time(NULL);	
 	if(argc>2){
+		for(int i=0; i<HB; i++){
+			free(grid[i]);
+			free(temp[i]);
+		}
+		free(grid);
+		free(temp);
 		perror("more than 1 argument not allowed");
 		exit(1);
 	}
@@ -267,6 +285,12 @@ int main(int argc,char *argv[]){
 
 	// 1. Initialize SDL Video Subsystem
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+		for(int i=0; i<HB; i++){
+			free(grid[i]);
+			free(temp[i]);
+		}
+		free(grid);
+		free(temp);
 		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
 		return 1; }
 
@@ -281,6 +305,12 @@ int main(int argc,char *argv[]){
 	);
 
 	if (window == NULL) {
+		for(int i=0; i<HB; i++){
+			free(grid[i]);
+			free(temp[i]);
+		}
+		free(grid);
+		free(temp);
 		printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
 		SDL_Quit();
 		return 1;
@@ -292,9 +322,9 @@ int main(int argc,char *argv[]){
 	while (!game_quit) {
 		while (SDL_PollEvent(&e) != 0) {
 			if(e.window.event==SDL_WINDOWEVENT_RESIZED){
-				global_change=1;
 				camera_h=e.window.data1;
 				camera_v=e.window.data2;
+				global_change=4;
 			}
 			//printf("%d,%d\n",e.window.data1,e.window.data2);
 			input_read(&e);
@@ -311,5 +341,11 @@ int main(int argc,char *argv[]){
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
+	for(int i=0; i<HB; i++){
+		free(grid[i]);
+		free(temp[i]);
+	}
+	free(grid);
+	free(temp);
 	return 0;
 }
